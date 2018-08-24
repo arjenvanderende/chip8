@@ -10,3 +10,9 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Chip-8 ROMS
+roms/*
+
+# Allow empty directories to be kept
+!.keep
