@@ -61,87 +61,87 @@ func (cpu *CPU) DisassembleOp() {
 		case 0xe0:
 			fmt.Printf("%-10s", "CLS")
 		case 0xee:
-			fmt.Printf("%-10s", "RTS")
+			fmt.Printf("%-10s", "RET")
 		default:
-			fmt.Printf("UNKNOWN 0")
+			fmt.Printf("%-10s %03x", "SYS", nnn)
 		}
 	case 0x1:
-		fmt.Printf("%-10s $%03x", "JUMP", nnn)
+		fmt.Printf("%-10s %03x", "JP", nnn)
 	case 0x2:
-		fmt.Printf("%-10s $%03x", "CALL", nnn)
+		fmt.Printf("%-10s %03x", "CALL", nnn)
 	case 0x3:
-		fmt.Printf("%-10s V%01X,#$%02x", "SKIP.EQ", vx, nn)
+		fmt.Printf("%-10s V%01x, %02x", "SE", vx, nn)
 	case 0x4:
-		fmt.Printf("%-10s V%01X,#$%02x", "SKIP.NE", vx, nn)
+		fmt.Printf("%-10s V%01x, %02x", "SNE", vx, nn)
 	case 0x5:
-		fmt.Printf("%-10s V%01X,V%01x", "SKIP.EQ", vx, vy)
+		fmt.Printf("%-10s V%01x, V%01x", "SE", vx, vy)
 	case 0x6:
-		fmt.Printf("%-10s V%01X,#$%02x", "MVI", vx, nn)
+		fmt.Printf("%-10s V%01x, %02x", "LD", vx, nn)
 	case 0x7:
-		fmt.Printf("%-10s V%01X,#$%02x", "ADI", vx, nn)
+		fmt.Printf("%-10s V%01x, %02x", "ADD", vx, nn)
 	case 0x8:
 		lastNib := cpu.memory[cpu.pc+1] & 0x0f
 		switch lastNib {
 		case 0x0:
-			fmt.Printf("%-10s V%01X,V%01X", "MOV.", vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x", "LD", vx, vy)
 		case 0x1:
-			fmt.Printf("%-10s V%01X,V%01X", "OR.", vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x", "OR", vx, vy)
 		case 0x2:
-			fmt.Printf("%-10s V%01X,V%01X", "AND.", vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x", "AND", vx, vy)
 		case 0x3:
-			fmt.Printf("%-10s V%01X,V%01X", "XOR.", vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x", "XOR", vx, vy)
 		case 0x4:
-			fmt.Printf("%-10s V%01X,V%01X", "ADD.", vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x", "ADD", vx, vy)
 		case 0x5:
-			fmt.Printf("%-10s V%01X,V%01X,V%01X", "SUB.", vx, vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x, V%01x", "SUB", vx, vx, vy)
 		case 0x6:
-			fmt.Printf("%-10s V%01X,V%01X", "SHIFTR.", vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x", "SHR", vx, vy)
 		case 0x7:
-			fmt.Printf("%-10s V%01X,V%01X,V%01X", "SUB.", vx, vy, vy)
+			fmt.Printf("%-10s V%01x, V%01x, V%01x", "SUBN", vx, vy, vy)
 		case 0xe:
-			fmt.Printf("%-10s V%01X,V%01X", "SHIFTL.", vx, vy)
+			fmt.Printf("%-10s V%01x, V%01x", "SHL", vx, vy)
 		default:
 			fmt.Printf("UNKNOWN 8")
 		}
 	case 0x9:
-		fmt.Printf("%-10s V%01X,V%01X", "SKIP.NE", vx, vy)
+		fmt.Printf("%-10s V%01x, V%01x", "SNE", vx, vy)
 	case 0xa:
-		fmt.Printf("%-10s I,#$%03x", "MVI", nnn)
+		fmt.Printf("%-10s I,%03x", "LD", nnn)
 	case 0xb:
-		fmt.Printf("%-10s $%03x(V0)", "JUMP", nnn)
+		fmt.Printf("%-10s V0,%03x", "JP", nnn)
 	case 0xc:
-		fmt.Printf("%-10s V%01x,#$%02x", "RNDMSK", vx, nn)
+		fmt.Printf("%-10s V%01x, %02x", "RND", vx, nn)
 	case 0xd:
-		fmt.Printf("%-10s V%01X,V%01X,#$%01x", "SPRITE", vx, vy, n)
+		fmt.Printf("%-10s V%01x, V%01x, %01x", "DRW", vx, vy, n)
 	case 0xe:
 		switch cpu.memory[cpu.pc+1] {
 		case 0x9e:
-			fmt.Printf("%-10s V%01X", "SKIP.KEYDOWN", vx)
+			fmt.Printf("%-10s V%01x", "SKP", vx)
 		case 0xa1:
-			fmt.Printf("%-10s V%01X", "SKIP.KEYUP", vx)
+			fmt.Printf("%-10s V%01x", "SKNP", vx)
 		default:
 			fmt.Printf("UNKNOWN E")
 		}
 	case 0xf:
 		switch cpu.memory[cpu.pc+1] {
 		case 0x07:
-			fmt.Printf("%-10s V%01X,DELAY", "MOV", vx)
+			fmt.Printf("%-10s V%01x, DELAY", "LD", vx)
 		case 0x0a:
-			fmt.Printf("%-10s V%01X", "KEY", vx)
+			fmt.Printf("%-10s V%01x, KEY", "LD", vx)
 		case 0x15:
-			fmt.Printf("%-10s DELAY,V%01X", "MOV", vx)
+			fmt.Printf("%-10s DELAY, V%01x", "LD", vx)
 		case 0x18:
-			fmt.Printf("%-10s SOUND,V%01X", "MOV", vx)
+			fmt.Printf("%-10s SOUND, V%01x", "LD", vx)
 		case 0x1e:
-			fmt.Printf("%-10s I,V%01X", "ADI", vx)
+			fmt.Printf("%-10s I, V%01x", "ADD", vx)
 		case 0x29:
-			fmt.Printf("%-10s I,V%01X", "SPRITECHAR", vx)
+			fmt.Printf("%-10s F, V%01x", "LD", vx)
 		case 0x33:
-			fmt.Printf("%-10s (I),V%01X", "MOVBCD", vx)
+			fmt.Printf("%-10s B, V%01x", "LD", vx)
 		case 0x55:
-			fmt.Printf("%-10s (I),V0-V%01X", "MOVM", vx)
+			fmt.Printf("%-10s [I], V%01x", "LD", vx)
 		case 0x65:
-			fmt.Printf("%-10s V0-V%01X,(I)", "MOVM", vx)
+			fmt.Printf("%-10s V%01x,[I]", "LD", vx)
 		default:
 			fmt.Printf("UNKNOWN F")
 		}
