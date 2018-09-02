@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"time"
+
+	"github.com/arjenvanderende/chip8/io"
 )
 
 const (
@@ -43,19 +45,25 @@ func Load(filename string) (*CPU, error) {
 }
 
 // Run starts running the program
-func (cpu *CPU) Run() {
+func (cpu *CPU) Run(graphics io.Graphics) {
 	clock := time.NewTicker(time.Second / time.Duration(clockRate))
 	defer clock.Stop()
 
 	frame := time.NewTicker(time.Second / time.Duration(60))
 	defer frame.Stop()
 
+	quit := time.NewTicker(5 * time.Second)
+	defer quit.Stop()
+
+	ops := 0
 	for {
 		select {
 		case <-clock.C:
-			fmt.Printf(".")
+			ops++
 		case <-frame.C:
-			fmt.Printf("F")
+			graphics.Draw(ops)
+		case <-quit.C:
+			return
 		}
 	}
 }
