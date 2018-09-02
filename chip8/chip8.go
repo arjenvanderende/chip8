@@ -3,10 +3,15 @@ package chip8
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
 )
 
-// ProgramOffset represents the offset in memory where the program is loaded
-const programOffset int = 0x200
+const (
+	// clockRate represents the number of operations that the CPU can process per second
+	clockRate int = 540
+	// programOffset represents the offset in memory where the program is loaded
+	programOffset int = 0x200
+)
 
 // Memory represents the memory address space of the Chip-8
 type Memory [0x1000]byte
@@ -35,6 +40,24 @@ func Load(filename string) (*CPU, error) {
 		cpu.memory[programOffset+i] = b
 	}
 	return &cpu, nil
+}
+
+// Run starts running the program
+func (cpu *CPU) Run() {
+	clock := time.NewTicker(time.Second / time.Duration(clockRate))
+	defer clock.Stop()
+
+	frame := time.NewTicker(time.Second / time.Duration(60))
+	defer frame.Stop()
+
+	for {
+		select {
+		case <-clock.C:
+			fmt.Printf(".")
+		case <-frame.C:
+			fmt.Printf("F")
+		}
+	}
 }
 
 // NextOp increments the PC to the next operation
