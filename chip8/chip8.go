@@ -3,6 +3,7 @@ package chip8
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"time"
 
 	"github.com/arjenvanderende/chip8/io"
@@ -13,6 +14,10 @@ const (
 	clockRate int = 540
 	// programOffset represents the offset in memory where the program is loaded
 	programOffset int = 0x200
+)
+
+var (
+	rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 // Memory represents the memory address space of the Chip-8
@@ -111,6 +116,8 @@ func (cpu *CPU) interpret(graphics io.Graphics) error {
 		cpu.v[vx] = cpu.v[vx] + nn
 	case 0xa:
 		cpu.i = nnn
+	case 0xc:
+		cpu.v[vx] = byte(rnd.Intn(256)) & nn
 	case 0xd:
 		x := int(cpu.v[vx])
 		y := int(cpu.v[vy])
