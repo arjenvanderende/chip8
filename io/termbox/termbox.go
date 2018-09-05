@@ -5,24 +5,14 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-// Termbox represents the I/O devices implemented via termbox-go
-type Termbox struct {
-	Display  io.Display
-	Keyboard io.Keyboard
-	keyboard *keyboard
-}
-
-// Close finalizes usage of the termbox library
-func (tb *Termbox) Close() {
-	tb.keyboard.close()
-	termbox.Close()
-}
+// Closer disposes the display and keyboard that the termbox library initialises
+type Closer func()
 
 // New initialises a display and keyboard device via the termbox library
-func New() (*Termbox, error) {
+func New() (io.Display, io.Keyboard, Closer, error) {
 	err := termbox.Init()
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	termbox.SetInputMode(termbox.InputEsc)
@@ -31,9 +21,9 @@ func New() (*Termbox, error) {
 	}
 	go keyboard.poll()
 
-	return &Termbox{
-		Display:  &display{},
-		Keyboard: keyboard,
-		keyboard: keyboard,
+	return &display{}, keyboard, func() {
+		// release all resources
+		keyboard.close()
+		termbox.Close()
 	}, nil
 }

@@ -44,14 +44,14 @@ func printOpcodes(cpu *chip8.CPU) {
 
 func run(cpu *chip8.CPU) error {
 	// initialise I/O devices
-	devices, err := termbox.New()
+	display, keyboard, closer, err := termbox.New()
 	if err != nil {
 		return fmt.Errorf("Unable to initialise graphics: %v", err)
 	}
-	defer devices.Close()
+	defer closer()
 
 	// run the program
-	err = cpu.Run(devices.Display, devices.Keyboard)
+	err = cpu.Run(display, keyboard)
 	if err != nil {
 		return fmt.Errorf("Program failed to run: %v", err)
 	}
