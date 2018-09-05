@@ -101,6 +101,10 @@ func (cpu *CPU) interpret(graphics io.Graphics) error {
 	case 0x1:
 		cpu.pc = int(nnn)
 		return nil
+	case 0x3:
+		if cpu.v[vx] == nn {
+			cpu.pc += 2
+		}
 	case 0x6:
 		cpu.v[vx] = nn
 	case 0x7:
