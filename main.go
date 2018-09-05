@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/arjenvanderende/chip8/chip8"
 	"github.com/arjenvanderende/chip8/io"
@@ -54,7 +53,6 @@ func run(cpu *chip8.CPU) error {
 	// run the program
 	err = cpu.Run(graphics)
 	if err != nil {
-		time.Sleep(3 * time.Second)
 		return fmt.Errorf("Program failed to run: %v", err)
 	}
 	return nil
