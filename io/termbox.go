@@ -47,7 +47,7 @@ func (t *tb) Draw(x, y int, sprite []byte) bool {
 		fmt.Printf("DRAW X=%d, Y=%d: %08b\n", x, y, line)
 		for dx := 0; dx < 8; dx++ {
 			// determine if pixel is on or off
-			p := ((y + dy) * width) + x + dx
+			p := (((y + dy) * width) + x + dx) % (width * height)
 			a := line&(1<<uint(7-dx)) > 0
 			b := t.pixels[p]
 			on := a != b
