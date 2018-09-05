@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/arjenvanderende/chip8/chip8"
-	"github.com/arjenvanderende/chip8/io"
+	"github.com/arjenvanderende/chip8/io/termbox"
 )
 
 func main() {
@@ -43,15 +43,15 @@ func printOpcodes(cpu *chip8.CPU) {
 }
 
 func run(cpu *chip8.CPU) error {
-	// initialise the graphics
-	graphics, err := io.NewTermbox()
+	// initialise I/O devices
+	devices, err := termbox.New()
 	if err != nil {
 		return fmt.Errorf("Unable to initialise graphics: %v", err)
 	}
-	defer graphics.Close()
+	defer devices.Close()
 
 	// run the program
-	err = cpu.Run(graphics)
+	err = cpu.Run(devices.Display, devices.Keyboard)
 	if err != nil {
 		return fmt.Errorf("Program failed to run: %v", err)
 	}

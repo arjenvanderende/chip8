@@ -55,27 +55,26 @@ func Load(filename string) (*CPU, error) {
 }
 
 // Run starts running the program
-func (cpu *CPU) Run(graphics io.Graphics) error {
+func (cpu *CPU) Run(display io.Display, keyboard io.Keyboard) error {
 	clock := time.NewTicker(time.Second / time.Duration(clockRate))
 	defer clock.Stop()
 
 	frame := time.NewTicker(time.Second / time.Duration(60))
 	defer frame.Stop()
 
-	quit := time.NewTicker(10 * time.Second)
-	defer quit.Stop()
-
 	for {
 		select {
 		case <-clock.C:
-			err := cpu.interpret(graphics)
+			err := cpu.interpret(display)
 			if err != nil {
 				return fmt.Errorf("Could not interpret op: %v", err)
 			}
 		case <-frame.C:
-			graphics.Flush()
-		case <-quit.C:
-			return nil
+			display.Flush()
+		case key := <-keyboard.Events():
+			if key == io.KeyEsc {
+				return nil
+			}
 		}
 	}
 }
@@ -84,7 +83,7 @@ func (cpu *CPU) printState(pc int, op string) {
 	fmt.Printf("op=%-40s pc=%03x next pc=%03x i=%03x v=%v\n", op, pc, cpu.pc, cpu.i, cpu.v)
 }
 
-func (cpu *CPU) interpret(graphics io.Graphics) error {
+func (cpu *CPU) interpret(display io.Display) error {
 	op := cpu.DisassembleOp()
 	defer cpu.printState(cpu.pc, op)
 
@@ -99,7 +98,7 @@ func (cpu *CPU) interpret(graphics io.Graphics) error {
 	case 0x0:
 		switch cpu.memory[cpu.pc+1] {
 		case 0xe0:
-			graphics.Clear()
+			display.Clear()
 		default:
 			return fmt.Errorf("Unknown 0")
 		}
@@ -126,7 +125,7 @@ func (cpu *CPU) interpret(graphics io.Graphics) error {
 		x := int(cpu.v[vx])
 		y := int(cpu.v[vy])
 		sprite := cpu.memory[cpu.i : cpu.i+uint16(n)]
-		collision := graphics.Draw(x, y, sprite)
+		collision := display.Draw(x, y, sprite)
 		if collision {
 			cpu.v[0xf] = 0x1
 		} else {

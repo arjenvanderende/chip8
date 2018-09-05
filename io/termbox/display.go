@@ -1,55 +1,33 @@
-package io
+package termbox
 
 import (
 	"fmt"
 
+	"github.com/arjenvanderende/chip8/io"
 	"github.com/nsf/termbox-go"
 )
 
-const (
-	width  = 64
-	height = 32
-)
-
-// Graphics does something
-type Graphics interface {
-	Clear()
-	Close()
-	Draw(x, y int, sprite []byte) bool
-	Flush()
+type display struct {
+	pixels [io.DisplayWidth * io.DisplayHeight]bool
 }
 
-type tb struct {
-	pixels [width * height]bool
-}
-
-// NewTermbox does something
-func NewTermbox() (Graphics, error) {
-	err := termbox.Init()
-	if err != nil {
-		return nil, err
-	}
-
-	return &tb{}, nil
-}
-
-func (t *tb) Clear() {
+func (s *display) Clear() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 }
 
-func (t *tb) Flush() {
+func (s *display) Flush() {
 	termbox.Flush()
 }
 
-func (t *tb) Draw(x, y int, sprite []byte) bool {
+func (s *display) Draw(x, y int, sprite []byte) bool {
 	collision := false
 	for dy, line := range sprite {
 		fmt.Printf("DRAW X=%d, Y=%d: %08b\n", x, y, line)
 		for dx := 0; dx < 8; dx++ {
 			// determine if pixel is on or off
-			p := (((y + dy) * width) + x + dx) % (width * height)
+			p := (((y + dy) * io.DisplayWidth) + x + dx) % (io.DisplayWidth * io.DisplayHeight)
 			a := line&(1<<uint(7-dx)) > 0
-			b := t.pixels[p]
+			b := s.pixels[p]
 			on := a != b
 
 			// collision detection
@@ -58,8 +36,8 @@ func (t *tb) Draw(x, y int, sprite []byte) bool {
 			}
 
 			// draw pixel
-			rx := p % width
-			ry := p / width
+			rx := p % io.DisplayWidth
+			ry := p / io.DisplayWidth
 			if on {
 				termbox.SetCell(rx, ry, '█', termbox.ColorGreen, termbox.ColorDefault)
 			} else {
@@ -67,12 +45,8 @@ func (t *tb) Draw(x, y int, sprite []byte) bool {
 			}
 
 			// remember the state
-			t.pixels[p] = on
+			s.pixels[p] = on
 		}
 	}
 	return collision
-}
-
-func (t *tb) Close() {
-	termbox.Close()
 }
