@@ -20,7 +20,7 @@ type Graphics interface {
 }
 
 type tb struct {
-	pixels [width][height]bool
+	pixels [width * height]bool
 }
 
 // NewTermbox does something
@@ -47,8 +47,9 @@ func (t *tb) Draw(x, y int, sprite []byte) bool {
 		fmt.Printf("DRAW X=%d, Y=%d: %08b\n", x, y, line)
 		for dx := 0; dx < 8; dx++ {
 			// determine if pixel is on or off
+			p := ((y + dy) * width) + x + dx
 			a := line&(1<<uint(7-dx)) > 0
-			b := t.pixels[x+dx][y+dy]
+			b := t.pixels[p]
 			on := a != b
 
 			// collision detection
@@ -57,10 +58,12 @@ func (t *tb) Draw(x, y int, sprite []byte) bool {
 			}
 
 			// draw pixel
+			rx := p % width
+			ry := p / width
 			if on {
-				termbox.SetCell(x+dx, y+dy, '█', termbox.ColorGreen, termbox.ColorDefault)
+				termbox.SetCell(rx, ry, '█', termbox.ColorGreen, termbox.ColorDefault)
 			} else {
-				termbox.SetCell(x+dx, y+dy, ' ', termbox.ColorDefault, termbox.ColorDefault)
+				termbox.SetCell(rx, ry, ' ', termbox.ColorDefault, termbox.ColorDefault)
 			}
 		}
 	}
