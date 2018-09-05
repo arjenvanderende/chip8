@@ -65,6 +65,9 @@ func (t *tb) Draw(x, y int, sprite []byte) bool {
 			} else {
 				termbox.SetCell(rx, ry, ' ', termbox.ColorDefault, termbox.ColorDefault)
 			}
+
+			// remember the state
+			t.pixels[p] = on
 		}
 	}
 	return collision
