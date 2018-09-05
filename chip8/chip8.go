@@ -20,8 +20,11 @@ type Memory [0x1000]byte
 
 // CPU represents the Chip8 CPU
 type CPU struct {
-	pc          int
-	memory      Memory
+	pc     int
+	memory Memory
+	i      uint16
+	v      [16]byte
+
 	programSize int
 }
 
@@ -37,6 +40,8 @@ func Load(filename string) (*CPU, error) {
 	cpu := CPU{
 		pc:          programOffset,
 		programSize: len(bytes),
+		i:           0,
+		v:           [16]byte{},
 	}
 	for i, b := range bytes {
 		cpu.memory[programOffset+i] = b
@@ -45,27 +50,79 @@ func Load(filename string) (*CPU, error) {
 }
 
 // Run starts running the program
-func (cpu *CPU) Run(graphics io.Graphics) {
+func (cpu *CPU) Run(graphics io.Graphics) error {
 	clock := time.NewTicker(time.Second / time.Duration(clockRate))
 	defer clock.Stop()
 
 	frame := time.NewTicker(time.Second / time.Duration(60))
 	defer frame.Stop()
 
-	quit := time.NewTicker(5 * time.Second)
+	quit := time.NewTicker(10 * time.Second)
 	defer quit.Stop()
 
-	ops := 0
 	for {
 		select {
 		case <-clock.C:
-			ops++
+			err := cpu.interpret(graphics)
+			if err != nil {
+				return fmt.Errorf("Could not interpret op: %v", err)
+			}
 		case <-frame.C:
-			graphics.Draw(ops)
+			graphics.Flush()
 		case <-quit.C:
-			return
+			return nil
 		}
 	}
+}
+
+func (cpu *CPU) printState(op string) {
+	fmt.Printf("op=%-40s pc=%03x i=%03x v=%v\n", op, cpu.pc, cpu.i, cpu.v)
+}
+
+func (cpu *CPU) interpret(graphics io.Graphics) error {
+	op := cpu.DisassembleOp()
+	defer cpu.printState(op)
+
+	nib1 := cpu.memory[cpu.pc] >> 4
+	vx := cpu.memory[cpu.pc] & 0x0f
+	vy := cpu.memory[cpu.pc+1] >> 4
+	n := cpu.memory[cpu.pc+1] & 0x0f
+	nn := cpu.memory[cpu.pc+1]
+	nnn := uint16(cpu.memory[cpu.pc]&0x0f)<<8 + uint16(cpu.memory[cpu.pc+1])
+
+	switch nib1 {
+	case 0x0:
+		switch cpu.memory[cpu.pc+1] {
+		case 0xe0:
+			graphics.Clear()
+		default:
+			return fmt.Errorf("Unknown 0")
+		}
+	case 0x1:
+		cpu.pc = int(nnn)
+		return nil
+	case 0x6:
+		cpu.v[vx] = nn
+	case 0x7:
+		cpu.v[vx] = cpu.v[vx] + nn
+	case 0xa:
+		cpu.i = nnn
+	case 0xd:
+		x := int(cpu.v[vx])
+		y := int(cpu.v[vy])
+		sprite := cpu.memory[cpu.i : cpu.i+uint16(n)]
+		collision := graphics.Draw(x, y, sprite)
+		if collision {
+			cpu.v[0xf] = 0x1
+		} else {
+			cpu.v[0xf] = 0x0
+		}
+	default:
+		return fmt.Errorf("Unknown nib: %d", nib1)
+	}
+
+	cpu.pc += 2
+	return nil
 }
 
 // NextOp increments the PC to the next operation
@@ -76,7 +133,7 @@ func (cpu *CPU) NextOp() bool {
 }
 
 // DisassembleOp output the assembly for the operation at the PC.
-func (cpu *CPU) DisassembleOp() {
+func (cpu *CPU) DisassembleOp() string {
 	nib1 := cpu.memory[cpu.pc] >> 4
 
 	vx := cpu.memory[cpu.pc] & 0x0f
@@ -85,98 +142,98 @@ func (cpu *CPU) DisassembleOp() {
 	nn := cpu.memory[cpu.pc+1]
 	nnn := int16(cpu.memory[cpu.pc]&0x0f)<<8 + int16(cpu.memory[cpu.pc+1])
 
-	fmt.Printf("%04x %02x %02x ", cpu.pc, cpu.memory[cpu.pc], cpu.memory[cpu.pc+1])
+	op := "not implemented"
 	switch nib1 {
 	case 0x0:
 		switch cpu.memory[cpu.pc+1] {
 		case 0xe0:
-			fmt.Printf("%-10s", "CLS")
+			op = fmt.Sprintf("%-10s", "CLS")
 		case 0xee:
-			fmt.Printf("%-10s", "RET")
+			op = fmt.Sprintf("%-10s", "RET")
 		default:
-			fmt.Printf("%-10s %03x", "SYS", nnn)
+			op = fmt.Sprintf("%-10s %03x", "SYS", nnn)
 		}
 	case 0x1:
-		fmt.Printf("%-10s %03x", "JP", nnn)
+		op = fmt.Sprintf("%-10s %03x", "JP", nnn)
 	case 0x2:
-		fmt.Printf("%-10s %03x", "CALL", nnn)
+		op = fmt.Sprintf("%-10s %03x", "CALL", nnn)
 	case 0x3:
-		fmt.Printf("%-10s V%01x, %02x", "SE", vx, nn)
+		op = fmt.Sprintf("%-10s V%01x, %02x", "SE", vx, nn)
 	case 0x4:
-		fmt.Printf("%-10s V%01x, %02x", "SNE", vx, nn)
+		op = fmt.Sprintf("%-10s V%01x, %02x", "SNE", vx, nn)
 	case 0x5:
-		fmt.Printf("%-10s V%01x, V%01x", "SE", vx, vy)
+		op = fmt.Sprintf("%-10s V%01x, V%01x", "SE", vx, vy)
 	case 0x6:
-		fmt.Printf("%-10s V%01x, %02x", "LD", vx, nn)
+		op = fmt.Sprintf("%-10s V%01x, %02x", "LD", vx, nn)
 	case 0x7:
-		fmt.Printf("%-10s V%01x, %02x", "ADD", vx, nn)
+		op = fmt.Sprintf("%-10s V%01x, %02x", "ADD", vx, nn)
 	case 0x8:
 		lastNib := cpu.memory[cpu.pc+1] & 0x0f
 		switch lastNib {
 		case 0x0:
-			fmt.Printf("%-10s V%01x, V%01x", "LD", vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x", "LD", vx, vy)
 		case 0x1:
-			fmt.Printf("%-10s V%01x, V%01x", "OR", vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x", "OR", vx, vy)
 		case 0x2:
-			fmt.Printf("%-10s V%01x, V%01x", "AND", vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x", "AND", vx, vy)
 		case 0x3:
-			fmt.Printf("%-10s V%01x, V%01x", "XOR", vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x", "XOR", vx, vy)
 		case 0x4:
-			fmt.Printf("%-10s V%01x, V%01x", "ADD", vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x", "ADD", vx, vy)
 		case 0x5:
-			fmt.Printf("%-10s V%01x, V%01x, V%01x", "SUB", vx, vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x, V%01x", "SUB", vx, vx, vy)
 		case 0x6:
-			fmt.Printf("%-10s V%01x, V%01x", "SHR", vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x", "SHR", vx, vy)
 		case 0x7:
-			fmt.Printf("%-10s V%01x, V%01x, V%01x", "SUBN", vx, vy, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x, V%01x", "SUBN", vx, vy, vy)
 		case 0xe:
-			fmt.Printf("%-10s V%01x, V%01x", "SHL", vx, vy)
+			op = fmt.Sprintf("%-10s V%01x, V%01x", "SHL", vx, vy)
 		default:
-			fmt.Printf("UNKNOWN 8")
+			op = fmt.Sprintf("UNKNOWN 8")
 		}
 	case 0x9:
-		fmt.Printf("%-10s V%01x, V%01x", "SNE", vx, vy)
+		op = fmt.Sprintf("%-10s V%01x, V%01x", "SNE", vx, vy)
 	case 0xa:
-		fmt.Printf("%-10s I,%03x", "LD", nnn)
+		op = fmt.Sprintf("%-10s I,%03x", "LD", nnn)
 	case 0xb:
-		fmt.Printf("%-10s V0,%03x", "JP", nnn)
+		op = fmt.Sprintf("%-10s V0,%03x", "JP", nnn)
 	case 0xc:
-		fmt.Printf("%-10s V%01x, %02x", "RND", vx, nn)
+		op = fmt.Sprintf("%-10s V%01x, %02x", "RND", vx, nn)
 	case 0xd:
-		fmt.Printf("%-10s V%01x, V%01x, %01x", "DRW", vx, vy, n)
+		op = fmt.Sprintf("%-10s V%01x, V%01x, %01x", "DRW", vx, vy, n)
 	case 0xe:
 		switch cpu.memory[cpu.pc+1] {
 		case 0x9e:
-			fmt.Printf("%-10s V%01x", "SKP", vx)
+			op = fmt.Sprintf("%-10s V%01x", "SKP", vx)
 		case 0xa1:
-			fmt.Printf("%-10s V%01x", "SKNP", vx)
+			op = fmt.Sprintf("%-10s V%01x", "SKNP", vx)
 		default:
-			fmt.Printf("UNKNOWN E")
+			op = fmt.Sprintf("UNKNOWN E")
 		}
 	case 0xf:
 		switch cpu.memory[cpu.pc+1] {
 		case 0x07:
-			fmt.Printf("%-10s V%01x, DELAY", "LD", vx)
+			op = fmt.Sprintf("%-10s V%01x, DELAY", "LD", vx)
 		case 0x0a:
-			fmt.Printf("%-10s V%01x, KEY", "LD", vx)
+			op = fmt.Sprintf("%-10s V%01x, KEY", "LD", vx)
 		case 0x15:
-			fmt.Printf("%-10s DELAY, V%01x", "LD", vx)
+			op = fmt.Sprintf("%-10s DELAY, V%01x", "LD", vx)
 		case 0x18:
-			fmt.Printf("%-10s SOUND, V%01x", "LD", vx)
+			op = fmt.Sprintf("%-10s SOUND, V%01x", "LD", vx)
 		case 0x1e:
-			fmt.Printf("%-10s I, V%01x", "ADD", vx)
+			op = fmt.Sprintf("%-10s I, V%01x", "ADD", vx)
 		case 0x29:
-			fmt.Printf("%-10s F, V%01x", "LD", vx)
+			op = fmt.Sprintf("%-10s F, V%01x", "LD", vx)
 		case 0x33:
-			fmt.Printf("%-10s B, V%01x", "LD", vx)
+			op = fmt.Sprintf("%-10s B, V%01x", "LD", vx)
 		case 0x55:
-			fmt.Printf("%-10s [I], V%01x", "LD", vx)
+			op = fmt.Sprintf("%-10s [I], V%01x", "LD", vx)
 		case 0x65:
-			fmt.Printf("%-10s V%01x,[I]", "LD", vx)
+			op = fmt.Sprintf("%-10s V%01x,[I]", "LD", vx)
 		default:
-			fmt.Printf("UNKNOWN F")
+			op = fmt.Sprintf("UNKNOWN F")
 		}
-	default:
-		fmt.Print("not implemented")
 	}
+
+	return fmt.Sprintf("%04x %02x %02x %s", cpu.pc, cpu.memory[cpu.pc], cpu.memory[cpu.pc+1], op)
 }
