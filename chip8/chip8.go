@@ -80,13 +80,13 @@ func (cpu *CPU) Run(graphics io.Graphics) error {
 	}
 }
 
-func (cpu *CPU) printState(op string) {
-	fmt.Printf("op=%-40s pc=%03x i=%03x v=%v\n", op, cpu.pc, cpu.i, cpu.v)
+func (cpu *CPU) printState(pc int, op string) {
+	fmt.Printf("op=%-40s pc=%03x next pc=%03x i=%03x v=%v\n", op, pc, cpu.pc, cpu.i, cpu.v)
 }
 
 func (cpu *CPU) interpret(graphics io.Graphics) error {
 	op := cpu.DisassembleOp()
-	defer cpu.printState(op)
+	defer cpu.printState(cpu.pc, op)
 
 	nib1 := cpu.memory[cpu.pc] >> 4
 	vx := cpu.memory[cpu.pc] & 0x0f
@@ -110,6 +110,10 @@ func (cpu *CPU) interpret(graphics io.Graphics) error {
 		if cpu.v[vx] == nn {
 			cpu.pc += 2
 		}
+	case 0x4:
+		if cpu.v[vx] != nn {
+			cpu.pc += 2
+		}
 	case 0x6:
 		cpu.v[vx] = nn
 	case 0x7:
@@ -127,6 +131,13 @@ func (cpu *CPU) interpret(graphics io.Graphics) error {
 			cpu.v[0xf] = 0x1
 		} else {
 			cpu.v[0xf] = 0x0
+		}
+	case 0xf:
+		switch cpu.memory[cpu.pc+1] {
+		case 0x1e:
+			cpu.i += uint16(cpu.v[vx])
+		default:
+			return fmt.Errorf("Unknown F: %2x", cpu.memory[cpu.pc+1])
 		}
 	default:
 		return fmt.Errorf("Unknown nib: %d", nib1)
