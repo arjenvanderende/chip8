@@ -3,6 +3,7 @@ package chip8
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"time"
 
@@ -80,7 +81,7 @@ func (cpu *CPU) Run(display io.Display, keyboard io.Keyboard) error {
 }
 
 func (cpu *CPU) printState(pc int, op string) {
-	fmt.Printf("op=%-40s pc=%03x next pc=%03x i=%03x v=%v\n", op, pc, cpu.pc, cpu.i, cpu.v)
+	log.Printf("op=%-40s pc=%03x next pc=%03x i=%03x v=%v\n", op, pc, cpu.pc, cpu.i, cpu.v)
 }
 
 func (cpu *CPU) interpret(display io.Display) error {

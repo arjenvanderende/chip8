@@ -1,7 +1,7 @@
 package termbox
 
 import (
-	"fmt"
+	"log"
 	"sync"
 
 	"github.com/arjenvanderende/chip8/io"
@@ -39,7 +39,7 @@ func (k *keyboard) poll() {
 					// Fallback for when channel is (being) closed, but key presses are still received/buffered before
 					// shutdown is complete. Otherwise the goroutine might hang trying to send on a full channel and/or
 					// panic on a closed channel.
-					fmt.Printf("Keyboard buffer full, dropped key: %v", event.Key)
+					log.Printf("Keyboard buffer full, dropped key: %v", event.Key)
 				}
 				k.mutex.Unlock()
 			}

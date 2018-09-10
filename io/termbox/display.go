@@ -1,7 +1,7 @@
 package termbox
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/arjenvanderende/chip8/io"
 	"github.com/nsf/termbox-go"
@@ -22,7 +22,7 @@ func (s *display) Flush() {
 func (s *display) Draw(x, y int, sprite []byte) bool {
 	collision := false
 	for dy, line := range sprite {
-		fmt.Printf("DRAW X=%d, Y=%d: %08b\n", x, y, line)
+		log.Printf("DRAW X=%d, Y=%d: %08b\n", x, y, line)
 		for dx := 0; dx < 8; dx++ {
 			// determine if pixel is on or off
 			p := (((y + dy) * io.DisplayWidth) + x + dx) % (io.DisplayWidth * io.DisplayHeight)

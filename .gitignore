@@ -16,3 +16,6 @@ roms/*
 
 # Allow empty directories to be kept
 !.keep
+
+# Logs
+*.log
