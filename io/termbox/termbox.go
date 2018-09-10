@@ -16,9 +16,7 @@ func New() (io.Display, io.Keyboard, Closer, error) {
 	}
 
 	termbox.SetInputMode(termbox.InputEsc)
-	keyboard := &keyboard{
-		events: make(chan (io.Key)),
-	}
+	keyboard := newKeyboard()
 	go keyboard.poll()
 
 	return &display{}, keyboard, func() {
