@@ -26,10 +26,12 @@ type Memory [0x1000]byte
 
 // CPU represents the Chip8 CPU
 type CPU struct {
-	pc     int
+	pc     int // program counter
 	memory Memory
-	i      uint16
-	v      [16]byte
+	i      uint16   // 16-bit register
+	v      [16]byte // 8-bit general purpose registers
+	sp     uint8    // stack pointer
+	stack  [16]int
 
 	programSize int
 }
@@ -48,6 +50,7 @@ func Load(filename string) (*CPU, error) {
 		programSize: len(bytes),
 		i:           0,
 		v:           [16]byte{},
+		sp:          0,
 	}
 	for i, b := range bytes {
 		cpu.memory[programOffset+i] = b
@@ -100,10 +103,18 @@ func (cpu *CPU) interpret(display io.Display) error {
 		switch cpu.memory[cpu.pc+1] {
 		case 0xe0:
 			display.Clear()
+		case 0xee:
+			cpu.sp--
+			cpu.pc = cpu.stack[cpu.sp]
 		default:
 			return fmt.Errorf("Unknown 0")
 		}
 	case 0x1:
+		cpu.pc = int(nnn)
+		return nil
+	case 0x2:
+		cpu.stack[cpu.sp] = cpu.pc
+		cpu.sp++
 		cpu.pc = int(nnn)
 		return nil
 	case 0x3:
