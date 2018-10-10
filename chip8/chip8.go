@@ -69,7 +69,7 @@ func (cpu *CPU) Run(display io.Display, keyboard io.Keyboard) error {
 	for {
 		select {
 		case <-clock.C:
-			err := cpu.interpret(display)
+			err := cpu.interpret(display, keyboard)
 			if err != nil {
 				return fmt.Errorf("Could not interpret op: %v", err)
 			}
@@ -87,7 +87,7 @@ func (cpu *CPU) printState(pc int, op string) {
 	log.Printf("op=%-40s pc=%03x next pc=%03x i=%03x v=%v\n", op, pc, cpu.pc, cpu.i, cpu.v)
 }
 
-func (cpu *CPU) interpret(display io.Display) error {
+func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
 	op := cpu.DisassembleOp()
 	defer cpu.printState(cpu.pc, op)
 
@@ -198,6 +198,9 @@ func (cpu *CPU) interpret(display io.Display) error {
 		}
 	case 0xf:
 		switch cpu.memory[cpu.pc+1] {
+		case 0x0a:
+			key := <-keyboard.Events()
+			cpu.v[vx] = io.KeyValue(key)
 		case 0x1e:
 			cpu.i += uint16(cpu.v[vx])
 		case 0x33:
