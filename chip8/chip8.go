@@ -129,6 +129,59 @@ func (cpu *CPU) interpret(display io.Display) error {
 		cpu.v[vx] = nn
 	case 0x7:
 		cpu.v[vx] = cpu.v[vx] + nn
+	case 0x8:
+		lastNib := cpu.memory[cpu.pc+1] & 0x0f
+		switch lastNib {
+		case 0x0:
+			cpu.v[vx] = cpu.v[vy]
+		case 0x1:
+			cpu.v[vx] = cpu.v[vx] | cpu.v[vy]
+		case 0x2:
+			cpu.v[vx] = cpu.v[vx] & cpu.v[vy]
+		case 0x3:
+			cpu.v[vx] = cpu.v[vx] ^ cpu.v[vy]
+		case 0x4:
+			// set carry flag
+			acc := int16(cpu.v[vx]) + int16(cpu.v[vy])
+			if acc > 255 {
+				cpu.v[0xf] = 1
+			} else {
+				cpu.v[0xf] = 0
+			}
+			cpu.v[vx] = byte(acc)
+		case 0x5:
+			// set borrow flag
+			if cpu.v[vx] > cpu.v[vy] {
+				cpu.v[0xf] = 1
+			} else {
+				cpu.v[0xf] = 0
+			}
+			cpu.v[vx] = cpu.v[vx] - cpu.v[vy]
+		case 0x6:
+			if cpu.v[vx]&0x1 > 0 {
+				cpu.v[0xf] = 1
+			} else {
+				cpu.v[0xf] = 0
+			}
+			cpu.v[vx] = cpu.v[vx] / 2
+		case 0x7:
+			// set borrow flag
+			if cpu.v[vy] > cpu.v[vx] {
+				cpu.v[0xf] = 1
+			} else {
+				cpu.v[0xf] = 0
+			}
+			cpu.v[vx] = cpu.v[vy] - cpu.v[vx]
+		case 0xe:
+			if cpu.v[vx]&0x80 > 0 {
+				cpu.v[0xf] = 1
+			} else {
+				cpu.v[0xf] = 0
+			}
+			cpu.v[vx] = cpu.v[vx] * 2
+		default:
+			return fmt.Errorf("Unknown 8: %1x", lastNib)
+		}
 	case 0xa:
 		cpu.i = nnn
 	case 0xc:
