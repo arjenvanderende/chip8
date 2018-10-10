@@ -200,9 +200,18 @@ func (cpu *CPU) interpret(display io.Display) error {
 		switch cpu.memory[cpu.pc+1] {
 		case 0x1e:
 			cpu.i += uint16(cpu.v[vx])
+		case 0x33:
+			v := uint16(cpu.v[vx])
+			cpu.memory[cpu.i+0] = byte((v / 100) % 10)
+			cpu.memory[cpu.i+1] = byte((v / 10) % 10)
+			cpu.memory[cpu.i+2] = byte(v % 10)
 		case 0x55:
 			for i := uint16(0); i <= uint16(vx); i++ {
 				cpu.memory[cpu.i+i] = cpu.v[i]
+			}
+		case 0x65:
+			for i := uint16(0); i <= uint16(vx); i++ {
+				cpu.v[i] = cpu.memory[cpu.i+i]
 			}
 		default:
 			return fmt.Errorf("Unknown F: %2x", cpu.memory[cpu.pc+1])
