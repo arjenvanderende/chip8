@@ -1,7 +1,6 @@
 package termbox
 
 import (
-	"log"
 	"sync"
 	"unicode"
 
@@ -9,9 +8,19 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+const keyPressDuration uint8 = 1
+
 type keyboard struct {
-	events chan (io.Key)
-	mutex  sync.Mutex
+	pressedKeys  map[io.Key]uint8
+	waitForPress chan io.Key
+	mutex        sync.RWMutex
+}
+
+func newKeyboard() *keyboard {
+	return &keyboard{
+		pressedKeys:  make(map[io.Key]uint8),
+		waitForPress: nil,
+	}
 }
 
 // Maps keyboard to the following layout:
@@ -26,23 +35,15 @@ var keyMapping = map[rune]io.Key{
 	rune('z'): io.KeyA, rune('x'): io.Key0, rune('c'): io.KeyB, rune('v'): io.KeyF,
 }
 
-func newKeyboard() *keyboard {
-	return &keyboard{
-		// Create an event buffer with a large enough size to prevent keys
-		// from being dropped when too many events are being sent.
-		events: make(chan (io.Key), 50),
-	}
-}
-
 func (k *keyboard) poll() {
 	for {
 		event := termbox.PollEvent()
 		switch event.Type {
 		case termbox.EventKey:
 			if key, ok := keyMapping[unicode.ToLower(event.Ch)]; ok {
-				k.sendKeyPress(key)
+				k.registerKeyPress(key)
 			} else if event.Key == termbox.KeyEsc {
-				k.sendKeyPress(io.KeyEsc)
+				k.registerKeyPress(io.KeyEsc)
 			}
 		case termbox.EventInterrupt:
 			return
@@ -50,29 +51,52 @@ func (k *keyboard) poll() {
 	}
 }
 
-func (k *keyboard) sendKeyPress(key io.Key) {
+func (k *keyboard) registerKeyPress(key io.Key) {
 	k.mutex.Lock()
-	select {
-	case k.events <- key:
-	default:
-		// Fallback for when channel is (being) closed, but key presses are still received/buffered before
-		// shutdown is complete. Otherwise the goroutine might hang trying to send on a full channel and/or
-		// panic on a closed channel.
-		log.Printf("Keyboard buffer full, dropped key: %v", key)
+	defer k.mutex.Unlock()
+
+	k.pressedKeys[key] = keyPressDuration
+
+	// emit event if WaitForKeyPress was invoked
+	if k.waitForPress != nil {
+		k.waitForPress <- key
+		close(k.waitForPress)
+		k.waitForPress = nil
 	}
-	k.mutex.Unlock()
 }
 
 func (k *keyboard) close() {
-	k.mutex.Lock()
-	close(k.events)
-	k.events = nil
-	k.mutex.Unlock()
-
 	// send interrupt to unblock poll()
 	termbox.Interrupt()
 }
 
-func (k *keyboard) Events() <-chan (io.Key) {
-	return k.events
+func (k *keyboard) Tick() {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	for key := range k.pressedKeys {
+		if k.pressedKeys[key] <= 0 {
+			delete(k.pressedKeys, key)
+		} else {
+			k.pressedKeys[key] = k.pressedKeys[key] - 1
+		}
+	}
+}
+
+func (k *keyboard) PressedButton() *io.Key {
+	k.mutex.RLock()
+	defer k.mutex.RUnlock()
+
+	for key := range k.pressedKeys {
+		return &key
+	}
+	return nil
+}
+
+func (k *keyboard) IsPressed(key io.Key) bool {
+	k.mutex.RLock()
+	defer k.mutex.RUnlock()
+
+	_, ok := k.pressedKeys[key]
+	return ok
 }

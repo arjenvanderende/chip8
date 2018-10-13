@@ -68,17 +68,23 @@ func (cpu *CPU) Run(display io.Display, keyboard io.Keyboard) error {
 
 	for {
 		select {
+		// // possible alternative
+		// case <-keyboard.Quit():
+		// 	return nil
 		case <-clock.C:
+			// run the next tick of the program
 			err := cpu.interpret(display, keyboard)
 			if err != nil {
 				return fmt.Errorf("Could not interpret op: %v", err)
 			}
-		case <-frame.C:
-			display.Flush()
-		case key := <-keyboard.Events():
-			if key == io.KeyEsc {
+
+			// check if the user tried to quit the program
+			if keyboard.IsPressed(io.KeyEsc) {
 				return nil
 			}
+			keyboard.Tick()
+		case <-frame.C:
+			display.Flush()
 		}
 	}
 }
@@ -196,11 +202,30 @@ func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
 		} else {
 			cpu.v[0xf] = 0x0
 		}
+	case 0xe:
+		switch cpu.memory[cpu.pc+1] {
+		case 0x9e:
+			if keyboard.IsPressed(io.Key(cpu.v[vx])) {
+				cpu.pc += 2
+			}
+		case 0xa1:
+			if !keyboard.IsPressed(io.Key(cpu.v[vx])) {
+				cpu.pc += 2
+			}
+		default:
+			return fmt.Errorf("Unknown E: %2x", cpu.memory[cpu.pc+1])
+		}
 	case 0xf:
 		switch cpu.memory[cpu.pc+1] {
 		case 0x0a:
-			key := <-keyboard.Events()
-			cpu.v[vx] = io.KeyValue(key)
+			key := keyboard.PressedButton()
+			if key == nil || io.IsOperationalKey(*key) {
+				// Skip processing the op at the current PC, allow the emulator
+				// to process the operational key and let it loop to the same
+				// op to start waiting for a key press again
+				return nil
+			}
+			cpu.v[vx] = byte(*key)
 		case 0x1e:
 			cpu.i += uint16(cpu.v[vx])
 		case 0x33:
