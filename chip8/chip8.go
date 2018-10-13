@@ -154,6 +154,10 @@ func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
 		if cpu.v[vx] != nn {
 			cpu.pc += 2
 		}
+	case 0x5:
+		if cpu.v[vx] == cpu.v[vy] {
+			cpu.pc += 2
+		}
 	case 0x6:
 		cpu.v[vx] = nn
 	case 0x7:
