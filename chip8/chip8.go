@@ -215,6 +215,10 @@ func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
 		default:
 			return fmt.Errorf("Unknown 8: %1x", lastNib)
 		}
+	case 0x9:
+		if cpu.v[vx] != cpu.v[vy] {
+			cpu.pc += 2
+		}
 	case 0xa:
 		cpu.i = nnn
 	case 0xc:
