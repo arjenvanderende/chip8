@@ -13,6 +13,7 @@ type display struct {
 
 func (s *display) Clear() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+	s.pixels = [io.DisplayWidth * io.DisplayHeight]bool{}
 }
 
 func (s *display) Flush() {
