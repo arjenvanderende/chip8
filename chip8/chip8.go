@@ -50,6 +50,8 @@ type CPU struct {
 	v      [16]byte // 8-bit general purpose registers
 	sp     uint8    // stack pointer
 	stack  [16]int
+	dt     byte // delay timer
+	st     byte // sound timer
 
 	programSize int
 }
@@ -69,6 +71,8 @@ func Load(filename string) (*CPU, error) {
 		i:           0,
 		v:           [16]byte{},
 		sp:          0,
+		dt:          0,
+		st:          0,
 	}
 	// copy digits for op: Fx29
 	for i, b := range digits {
@@ -107,6 +111,8 @@ func (cpu *CPU) Run(display io.Display, keyboard io.Keyboard) error {
 			}
 			keyboard.Tick()
 		case <-frame.C:
+			// TODO: play sound with sound timer is active
+			cpu.decrementTimers()
 			display.Flush()
 		}
 	}
@@ -248,6 +254,8 @@ func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
 		}
 	case 0xf:
 		switch cpu.memory[cpu.pc+1] {
+		case 0x07:
+			cpu.v[vx] = cpu.dt
 		case 0x0a:
 			key := keyboard.PressedButton()
 			if key == nil || io.IsOperationalKey(*key) {
@@ -257,6 +265,10 @@ func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
 				return nil
 			}
 			cpu.v[vx] = byte(*key)
+		case 0x15:
+			cpu.dt = cpu.v[vx]
+		case 0x18:
+			cpu.st = cpu.v[vx]
 		case 0x1e:
 			cpu.i += uint16(cpu.v[vx])
 		case 0x29:
@@ -283,6 +295,15 @@ func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
 
 	cpu.pc += 2
 	return nil
+}
+
+func (cpu *CPU) decrementTimers() {
+	if cpu.dt > 0 {
+		cpu.dt--
+	}
+	if cpu.st > 0 {
+		cpu.dt--
+	}
 }
 
 // NextOp increments the PC to the next operation
