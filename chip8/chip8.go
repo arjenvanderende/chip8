@@ -54,6 +54,7 @@ type CPU struct {
 	st     byte // sound timer
 
 	programSize int
+	prevPC      int // program counter of previous interpret() call, used to detect multiple invocations when waiting for key press
 }
 
 // Load reads the program stored in the file into memory
@@ -116,7 +117,10 @@ func (cpu *CPU) Run(display io.Display, keyboard io.Keyboard) error {
 }
 
 func (cpu *CPU) printState(pc int, op string) {
-	log.Printf("op=%-40s pc=%03x next pc=%03x i=%03x v=%v\n", op, pc, cpu.pc, cpu.i, cpu.v)
+	if cpu.prevPC != pc {
+		log.Printf("op=%-40s pc=%03x next pc=%03x i=%03x v=%v\n", op, pc, cpu.pc, cpu.i, cpu.v)
+	}
+	cpu.prevPC = pc
 }
 
 func (cpu *CPU) interpret(display io.Display, keyboard io.Keyboard) error {
