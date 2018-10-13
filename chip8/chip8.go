@@ -95,9 +95,6 @@ func (cpu *CPU) Run(display io.Display, keyboard io.Keyboard) error {
 
 	for {
 		select {
-		// // possible alternative
-		// case <-keyboard.Quit():
-		// 	return nil
 		case <-clock.C:
 			// run the next tick of the program
 			err := cpu.interpret(display, keyboard)
